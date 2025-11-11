@@ -14,9 +14,9 @@ let player = {x:1,y:1};
 const start = {x:1,y:1};
 const goal = {x:cols-2,y:rows-2};
 let moves = 0, hits = 0;
-// fog-of-war: which cells have been seen (explored)
-let seen;
-const SIGHT = 3; // sight radius (Manhattan)
+// fog-of-war: numeric visibility (0..1) per cell — allows falloff so distant cells reveal less
+let seen; // numeric 2D array
+const SIGHT = 3; // sight radius (Manhattan); increase to see more
 
 function makeGrid(r,c){
   const g = Array.from({length:r},()=>Array(c).fill(1));
@@ -61,29 +61,42 @@ function draw(){
     ctx.fillStyle='rgba(124,227,168,0.12)';
     ctx.fillRect(goal.x*cellSize,goal.y*cellSize,cellSize,cellSize);
   } else {
-    // draw only seen areas (fog-of-war)
+    // draw only seen areas (fog-of-war) with alpha falloff
     for(let y=0;y<rows;y++){
       for(let x=0;x<cols;x++){
-        if(!seen[y][x]) continue; // still in fog
+        const v = seen[y][x] || 0; // 0..1
+        if(v <= 0) continue; // still fogged
+
         // draw faint floor for seen passage cells so player knows explored area
-        ctx.fillStyle = 'rgba(12,30,44,0.22)';
+        ctx.fillStyle = `rgba(12,30,44,${0.18 * v})`;
         ctx.fillRect(x*cellSize,y*cellSize,cellSize,cellSize);
+
         if(grid[y][x]===1){
-          ctx.fillStyle='#0d2230';
+          // walls drawn with stronger alpha but still scaled by visibility
+          ctx.fillStyle = `rgba(13,34,48,${0.9 * v})`;
           ctx.fillRect(x*cellSize,y*cellSize,cellSize,cellSize);
         }
       }
     }
-    // goal only visible if seen
-    if(seen[goal.y][goal.x]){
+
+    // goal visible only once sufficiently revealed
+    if((seen[goal.y][goal.x] || 0) >= 0.35){
       ctx.fillStyle='rgba(124,227,168,0.12)';
       ctx.fillRect(goal.x*cellSize,goal.y*cellSize,cellSize,cellSize);
     }
   }
 
-  // draw player
+  // draw player (always fully visible)
   const px = player.x*cellSize + cellSize/2;
   const py = player.y*cellSize + cellSize/2;
+  // subtle halo to indicate lighted area
+  ctx.beginPath();
+  const halo = ctx.createRadialGradient(px,py,0,px,py,cellSize*2.2);
+  halo.addColorStop(0, 'rgba(124,227,168,0.10)');
+  halo.addColorStop(1, 'rgba(124,227,168,0.01)');
+  ctx.fillStyle = halo;
+  ctx.fillRect(px - cellSize*2.2, py - cellSize*2.2, cellSize*4.4, cellSize*4.4);
+
   ctx.beginPath();
   ctx.fillStyle='#7ce3a8';
   ctx.arc(px,py,cellSize*0.34,0,Math.PI*2);
@@ -93,10 +106,15 @@ function draw(){
 
 // reveal cells around (cx,cy) within SIGHT (Manhattan) — marks them as seen
 function reveal(cx,cy){
+  // set numeric visibility with linear falloff (center = 1, at SIGHT -> small > 0)
   for(let y=0;y<rows;y++){
     for(let x=0;x<cols;x++){
       const dist = Math.abs(x-cx) + Math.abs(y-cy);
-      if(dist <= SIGHT) seen[y][x] = true;
+      if(dist <= SIGHT){
+        // linear falloff: dist=0 -> 1, dist=SIGHT -> ~1/(SIGHT+1)
+        const vis = Math.max(0, (SIGHT - dist + 1) / (SIGHT + 1));
+        seen[y][x] = Math.max(seen[y][x] || 0, vis);
+      }
     }
   }
 }
@@ -139,8 +157,8 @@ function win(){
 function reset(){
   overlay.innerHTML='';moves=0;hits=0;player={x:start.x,y:start.y};
   grid=makeGrid(rows,cols);
-  // initialize seen map
-  seen = Array.from({length:rows},()=>Array(cols).fill(false));
+  // initialize numeric seen map
+  seen = Array.from({length:rows},()=>Array(cols).fill(0));
   reveal(start.x, start.y);
   updateStats();draw();
 }
@@ -165,6 +183,6 @@ debugToggle.addEventListener('change',draw);
 
 // initialize
 grid = makeGrid(rows,cols);
-seen = Array.from({length:rows},()=>Array(cols).fill(false));
+seen = Array.from({length:rows},()=>Array(cols).fill(0));
 reveal(start.x, start.y);
 updateStats();draw();

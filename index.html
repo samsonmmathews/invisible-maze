@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width,initial-scale=1" />
+		<title>Invisible Maze</title>
+			<link rel="stylesheet" href="styles.css" />
+	</head>
+	<body>
+		<div class="wrap">
+			<header>
+				<h1>InvisibleMaze.com</h1>
+				<div class="small">Use arrow keys to move. The maze is invisible — sometimes you hit a wall, sometimes you win.</div>
+			</header>
+
+			<div class="hud">
+				<button id="reset" class="btn">Reset</button>
+				<label class="debug small">Show maze
+					<input id="debug" class="toggle" type="checkbox" />
+				</label>
+				<div class="stats" id="stats">Moves: 0 · Hits: 0</div>
+			</div>
+
+			<div class="board">
+				<canvas id="canvas" width="700" height="700"></canvas>
+				<div id="flash" class="flash"></div>
+			</div>
+
+			<div class="message small">Reach the far corner to win. Toggle "Show maze" to reveal for testing.</div>
+		</div>
+
+		<div class="overlay" id="overlay"></div>
+
+		<footer>Built for fun — arrow keys | invisible maze</footer>
+
+			<script src="scripts.js"></script>
+	</body>
+</html>
